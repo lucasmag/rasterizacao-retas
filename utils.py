@@ -1,4 +1,6 @@
-from typing import Tuple, List
+import operator
+from dataclasses import dataclass
+from typing import List
 from PIL import Image
 import numpy
 
@@ -15,34 +17,34 @@ class PontosIguais(Exception):
         super().__init__(self, msg)
 
 
+@dataclass
+class Ponto:
+    x: int
+    y: int
+
+
 class ModeloReta:
-    ponto_origem: Tuple[int, int]
-    ponto_destino: Tuple[int, int]
+    ponto_origem: Ponto
+    ponto_destino: Ponto
     delta_x: int
     delta_y: int
-    x: float
-    y: float
+    x: float  # x atual
+    y: float  # y atual
     m: float
     tipo: str
 
-    def __init__(self, ponto1: Tuple[int, int], ponto2: Tuple[int, int]):
+    def __init__(self, ponto1: Ponto, ponto2: Ponto):
         self.definir_pontos_de_origem_e_destino(ponto1, ponto2)
         self.definir_deltas()
 
-    def definir_pontos_de_origem_e_destino(self, ponto1: Tuple[int, int], ponto2: Tuple[int, int]):
-        if ponto1[0] < ponto2[0]:
-            self.ponto_origem = ponto1
-            self.ponto_destino = ponto2
-        else:
-            self.ponto_origem = ponto2
-            self.ponto_destino = ponto1
-
-        self.x = self.ponto_origem[0]
-        self.y = self.ponto_origem[1]
+    def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
+        self.ponto_origem, self.ponto_destino = sorted([ponto1, ponto2], key=operator.attrgetter('x'))
+        self.x = self.ponto_origem.x
+        self.y = self.ponto_origem.y
 
     def definir_deltas(self):
-        self.delta_x = abs(self.ponto_origem[0] - self.ponto_destino[0])
-        self.delta_y = abs(self.ponto_origem[1] - self.ponto_destino[1])
+        self.delta_x = abs(self.ponto_origem.x - self.ponto_destino.x)
+        self.delta_y = abs(self.ponto_origem.y - self.ponto_destino.y)
 
     def definir_m(self):
         pass
@@ -57,7 +59,7 @@ class ModeloReta:
 class ModeloRetaDeltaX(ModeloReta):
     tipo = "X"
 
-    def __init__(self, p1: Tuple[int, int], p2: Tuple[int, int]):
+    def __init__(self, p1: Ponto, p2: Ponto):
         super().__init__(p1, p2)
         self.definir_m()
 
@@ -75,7 +77,7 @@ class ModeloRetaDeltaX(ModeloReta):
 class ModeloRetaDeltaY(ModeloReta):
     tipo = "Y"
 
-    def __init__(self, p1: Tuple[int, int], p2: Tuple[int, int]):
+    def __init__(self, p1: Ponto, p2: Ponto):
         super().__init__(p1, p2)
         self.definir_m()
 
@@ -91,33 +93,28 @@ class ModeloRetaDeltaY(ModeloReta):
 
 
 class Reta:
-    ponto_origem: Tuple[int, int]
-    ponto_destino: Tuple[int, int]
+    ponto_origem: Ponto
+    ponto_destino: Ponto
     delta_x: int
     delta_y: int
 
-    def __init__(self, p1: Tuple[int, int], p2: Tuple[int, int]):
+    def __init__(self, p1: Ponto, p2: Ponto):
         if p1 == p2:
             raise PontosIguais("Pontos não podem ser iguais")
 
         self.definir_pontos_de_origem_e_destino(p1, p2)
         self.definir_deltas()
 
-    def definir_pontos_de_origem_e_destino(self, ponto1: Tuple[int, int], ponto2: Tuple[int, int]):
-        if ponto1[0] < ponto2[0]:
-            self.ponto_origem = ponto1
-            self.ponto_destino = ponto2
-        else:
-            self.ponto_origem = ponto2
-            self.ponto_destino = ponto1
+    def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
+        self.ponto_origem, self.ponto_destino = sorted([ponto1, ponto2], key=operator.attrgetter('x'))
 
     def definir_deltas(self):
-        self.delta_x = abs(self.ponto_origem[0] - self.ponto_destino[0])
-        self.delta_y = abs(self.ponto_origem[1] - self.ponto_destino[1])
+        self.delta_x = abs(self.ponto_origem.x - self.ponto_destino.x)
+        self.delta_y = abs(self.ponto_origem.y - self.ponto_destino.y)
 
     def gerar_modelo(self):
         if self.delta_y > self.delta_x:
-            if self.ponto_origem[1] > self.ponto_destino[1]:
+            if self.ponto_origem.y > self.ponto_destino.y:
                 print("OOOOPSSSS")
             return ModeloRetaDeltaY(self.ponto_origem, self.ponto_destino)
             # TODO ver caso em q Y inicial é maior
@@ -144,20 +141,20 @@ class Rasterizador:
     def rasterizacao_em_x_crescente(self):
         b = self.modelo.calcular_b()
 
-        for x in range(self.modelo.x, self.modelo.ponto_destino[0]):
-            self.pintar((x, self.modelo.y))
+        for x in range(self.modelo.x, self.modelo.ponto_destino.x):
+            self.pintar(Ponto(x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
 
     def rasterizacao_em_y_crescente(self):
         b = self.modelo.calcular_b()
 
-        for y in range(self.modelo.y, self.modelo.ponto_destino[1]):
-            self.pintar((self.modelo.x, y))
+        for y in range(self.modelo.y, self.modelo.ponto_destino.y):
+            self.pintar(Ponto(self.modelo.x, y))
             self.modelo.recalcular_pontos(b)
 
-    def pintar(self, ponto):
+    def pintar(self, ponto: Ponto):
         try:
-            self.imagem[abs(int(ponto[0])), abs(int(ponto[1]))] = PRETO
+            self.imagem[abs(int(ponto.x)), abs(int(ponto.y))] = PRETO
         except IndexError:
             raise PintarForaDaImagem("O pixel encontra-se fora da imagem. Crie uma imagem maior")
 

@@ -1,11 +1,16 @@
-from typing import Tuple
+from typing import Tuple, List
 from PIL import Image
 import numpy
 
 PRETO = [50, 50, 50]
 
 
-class PintarForaDaImagem(IndexError):
+class PintarForaDaImagem(Exception):
+    def __init__(self, msg):
+        super().__init__(self, msg)
+
+
+class PontosIguais(Exception):
     def __init__(self, msg):
         super().__init__(self, msg)
 
@@ -15,9 +20,8 @@ class ModeloReta:
     ponto_destino: Tuple[int, int]
     delta_x: int
     delta_y: int
-    total_eixo_dominante: int
-    dominante_atual: int
-    secundario_atual: float
+    x: float
+    y: float
     m: float
     tipo: str
 
@@ -33,6 +37,9 @@ class ModeloReta:
             self.ponto_origem = ponto2
             self.ponto_destino = ponto1
 
+        self.x = self.ponto_origem[0]
+        self.y = self.ponto_origem[1]
+
     def definir_deltas(self):
         self.delta_x = abs(self.ponto_origem[0] - self.ponto_destino[0])
         self.delta_y = abs(self.ponto_origem[1] - self.ponto_destino[1])
@@ -41,11 +48,10 @@ class ModeloReta:
         pass
 
     def calcular_b(self):
-        return self.secundario_atual - (self.m * self.dominante_atual)
+        return 0.0
 
     def recalcular_pontos(self, b: float):
-        self.dominante_atual += 1
-        self.secundario_atual = self.m * self.dominante_atual + b
+        pass
 
 
 class ModeloRetaDeltaX(ModeloReta):
@@ -54,15 +60,16 @@ class ModeloRetaDeltaX(ModeloReta):
     def __init__(self, p1: Tuple[int, int], p2: Tuple[int, int]):
         super().__init__(p1, p2)
         self.definir_m()
-        self.definir_eixos()
 
     def definir_m(self):
         self.m = self.delta_y / self.delta_x
 
-    def definir_eixos(self):
-        self.total_eixo_dominante = max(self.ponto_origem[0], self.ponto_destino[0])
-        self.dominante_atual = self.ponto_origem[0]
-        self.secundario_atual = self.ponto_origem[1]
+    def calcular_b(self):
+        return self.y - (self.m * self.x)
+
+    def recalcular_pontos(self, b: float):
+        self.x += 1
+        self.y = self.m * self.x + b
 
 
 class ModeloRetaDeltaY(ModeloReta):
@@ -71,15 +78,16 @@ class ModeloRetaDeltaY(ModeloReta):
     def __init__(self, p1: Tuple[int, int], p2: Tuple[int, int]):
         super().__init__(p1, p2)
         self.definir_m()
-        self.definir_eixos()
 
     def definir_m(self):
         self.m = self.delta_x / self.delta_y
 
-    def definir_eixos(self):
-        self.total_eixo_dominante = max(self.ponto_origem[1], self.ponto_destino[1])
-        self.dominante_atual = self.ponto_origem[1]
-        self.secundario_atual = self.ponto_origem[0]
+    def calcular_b(self):
+        return self.x - (self.m * self.y)
+
+    def recalcular_pontos(self, b: float):
+        self.y += 1
+        self.x = self.m * self.y + b
 
 
 class Reta:
@@ -89,6 +97,9 @@ class Reta:
     delta_y: int
 
     def __init__(self, p1: Tuple[int, int], p2: Tuple[int, int]):
+        if p1 == p2:
+            raise PontosIguais("Pontos não podem ser iguais")
+
         self.definir_pontos_de_origem_e_destino(p1, p2)
         self.definir_deltas()
 
@@ -124,27 +135,25 @@ class Rasterizador:
 
     def rasterizar(self):
         {
-            "X": self.rasterizacao_em_x,
-            "Y": self.rasterizacao_em_y
+            "X": self.rasterizacao_em_x_crescente,
+            "Y": self.rasterizacao_em_y_crescente
         }[self.modelo.tipo]()
 
         return self.imagem
 
-    def rasterizacao_em_x(self):
+    def rasterizacao_em_x_crescente(self):
         b = self.modelo.calcular_b()
-        self.pintar((self.modelo.dominante_atual, self.modelo.secundario_atual))
 
-        while self.modelo.dominante_atual < self.modelo.total_eixo_dominante:
+        for x in range(self.modelo.x, self.modelo.ponto_destino[0]):
+            self.pintar((x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
-            self.pintar((self.modelo.dominante_atual, self.modelo.secundario_atual))
 
-    def rasterizacao_em_y(self):
+    def rasterizacao_em_y_crescente(self):
         b = self.modelo.calcular_b()
-        self.pintar((self.modelo.secundario_atual, self.modelo.dominante_atual))
 
-        while self.modelo.dominante_atual < self.modelo.total_eixo_dominante:
+        for y in range(self.modelo.y, self.modelo.ponto_destino[1]):
+            self.pintar((self.modelo.x, y))
             self.modelo.recalcular_pontos(b)
-            self.pintar((self.modelo.secundario_atual, self.modelo.dominante_atual))
 
     def pintar(self, ponto):
         try:
@@ -166,6 +175,11 @@ class Imagem:
     def rasterizar(self, modelo: ModeloReta):
         rasterizador = Rasterizador(self.array_imagem, modelo)
         self.array_imagem = rasterizador.rasterizar()
+
+    def rasterizar_varios(self, modelos: List[ModeloReta]):
+        for modelo in modelos:
+            rasterizador = Rasterizador(self.array_imagem, modelo)
+            self.array_imagem = rasterizador.rasterizar()
 
     def salvar(self, nome: str):
         img = Image.fromarray(self.array_imagem).transpose(Image.ROTATE_90)

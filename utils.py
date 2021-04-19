@@ -1,4 +1,4 @@
-import operator
+from operator import attrgetter
 from dataclasses import dataclass
 from typing import List, Union
 from PIL import Image
@@ -38,7 +38,7 @@ class ModeloReta:
         self.definir_deltas()
 
     def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
-        self.ponto_origem, self.ponto_destino = sorted([ponto1, ponto2], key=operator.attrgetter('x'))
+        self.ponto_origem, self.ponto_destino = sorted([ponto1, ponto2], key=attrgetter('x'))
         self.x = self.ponto_origem.x
         self.y = self.ponto_origem.y
 

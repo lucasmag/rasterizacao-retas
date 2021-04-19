@@ -106,7 +106,7 @@ class Reta:
         self.definir_deltas()
 
     def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
-        ponto_mais_a_esquerda, ponto_mais_a_direita = sorted([ponto1, ponto2], key=operator.attrgetter('x'))
+        ponto_mais_a_esquerda, ponto_mais_a_direita = sorted([ponto1, ponto2], key=attrgetter('x'))
         self.ponto_origem = ponto_mais_a_esquerda
         self.ponto_destino = ponto_mais_a_direita
 

@@ -1,6 +1,6 @@
 import operator
 from dataclasses import dataclass
-from typing import List
+from typing import List, Union
 from PIL import Image
 import numpy
 
@@ -28,8 +28,8 @@ class ModeloReta:
     ponto_destino: Ponto
     delta_x: int
     delta_y: int
-    x: float  # x atual
-    y: float  # y atual
+    x: Union[int, float]  # x atual
+    y: Union[int, float]  # y atual
     m: float
     tipo: str
 
@@ -106,7 +106,9 @@ class Reta:
         self.definir_deltas()
 
     def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
-        self.ponto_origem, self.ponto_destino = sorted([ponto1, ponto2], key=operator.attrgetter('x'))
+        ponto_mais_a_esquerda, ponto_mais_a_direita = sorted([ponto1, ponto2], key=operator.attrgetter('x'))
+        self.ponto_origem = ponto_mais_a_esquerda
+        self.ponto_destino = ponto_mais_a_direita
 
     def definir_deltas(self):
         self.delta_x = abs(self.ponto_origem.x - self.ponto_destino.x)
@@ -114,21 +116,14 @@ class Reta:
 
     def gerar_modelo(self):
         if self.delta_y > self.delta_x:
-            if self.ponto_origem.y > self.ponto_destino.y:
-                print("OOOOPSSSS")
             return ModeloRetaDeltaY(self.ponto_origem, self.ponto_destino)
-            # TODO ver caso em q Y inicial é maior
-
         return ModeloRetaDeltaX(self.ponto_origem, self.ponto_destino)
 
 
+@dataclass()
 class Rasterizador:
     imagem: numpy
     modelo: ModeloReta
-
-    def __init__(self, imagem: numpy, modelo: ModeloReta):
-        self.imagem = imagem
-        self.modelo = modelo
 
     def rasterizar(self):
         {
@@ -169,13 +164,13 @@ class Imagem:
         # Gera array tridimencional (largura, altura, cor do pixel) com todos os pixeis brancos
         self.array_imagem = numpy.full((la, al, 3), 255, dtype=numpy.uint8)
 
-    def rasterizar(self, modelo: ModeloReta):
-        rasterizador = Rasterizador(self.array_imagem, modelo)
+    def rasterizar(self, reta: Reta):
+        rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
         self.array_imagem = rasterizador.rasterizar()
 
-    def rasterizar_varios(self, modelos: List[ModeloReta]):
-        for modelo in modelos:
-            rasterizador = Rasterizador(self.array_imagem, modelo)
+    def rasterizar_varios(self, retas: List[Reta]):
+        for reta in retas:
+            rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
             self.array_imagem = rasterizador.rasterizar()
 
     def salvar(self, nome: str):

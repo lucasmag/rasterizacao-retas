@@ -1,12 +1,15 @@
 from utils import Reta, Imagem, Ponto
 
-if __name__ == "__main__":
+
+def gerar_amostras():
     lista_de_retas = [
-        Reta(Ponto(0, 0), Ponto(900, 200)),
-        Reta(Ponto(0, 0), Ponto(500, 500)),
-        Reta(Ponto(100, 200), Ponto(500, 1000))
+        Reta(Ponto(10, 5), Ponto(20, 0))
     ]
 
-    imagem = Imagem(1000, 1000)
+    imagem = Imagem(20, 20)
     imagem.rasterizar_varios(lista_de_retas)
     imagem.salvar(nome="teste")
+
+
+if __name__ == "__main__":
+    gerar_amostras()

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Union
 from PIL import Image
 import numpy
-from math import ceil, floor
+from math import floor
 
 PRETO = [50, 50, 50]
 

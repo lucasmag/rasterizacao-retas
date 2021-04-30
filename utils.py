@@ -119,7 +119,7 @@ class ModeloRetaDeltaYDescrescente(ModeloReta):
         self.m = self.delta_x / self.delta_y
 
     def calcular_b(self):
-        return self.x - (self.m * self.y)
+        return -self.x - (self.m * self.y)
 
     def recalcular_pontos(self, b: float):
         self.y -= 1

@@ -107,7 +107,7 @@ class ModeloRetaDeltaY(ModeloReta):
         self.x = int(self.m * self.y + b)
 
 
-class ModeloRetaDeltaYDescrescente(ModeloReta):
+class ModeloRetaYDecrescenteDeltaY(ModeloReta):
     tipo = "Yd"
 
     def __init__(self, dados: PontosEDeltas):
@@ -126,7 +126,7 @@ class ModeloRetaDeltaYDescrescente(ModeloReta):
         self.x = abs(int(self.m * self.y + b))
 
 
-class ModeloRetaDeltaXDescrescente(ModeloReta):
+class ModeloRetaYDecrescenteDeltaX(ModeloReta):
     tipo = "Xd"
 
     def __init__(self, dados: PontosEDeltas):
@@ -169,8 +169,8 @@ class Reta:
     def gerar_modelo(self):
         if self.dados.ponto_origem.y > self.dados.ponto_destino.y:
             if self.dados.delta_y > self.dados.delta_x:
-                return ModeloRetaDeltaYDescrescente(self.dados)
-            return ModeloRetaDeltaXDescrescente(self.dados)
+                return ModeloRetaYDecrescenteDeltaY(self.dados)
+            return ModeloRetaYDecrescenteDeltaX(self.dados)
 
         else:
             if self.dados.delta_y > self.dados.delta_x:
@@ -185,35 +185,35 @@ class Rasterizador:
 
     def rasterizar(self):
         dict(
-            X=self.rasterizacao_em_x_crescente,
-            Y=self.rasterizacao_em_y_crescente,
-            Yd=self.rasterizacao_em_y_decrescente,
-            Xd=self.rasterizacao_em_x_decrescente
+            X=self.rasterizacao_com_delta_x,
+            Y=self.rasterizacao_com_delta_y,
+            Yd=self.rasterizacao_reta_decrescente_com_delta_y,
+            Xd=self.rasterizacao_reta_descrescente_com_delta_x
         )[self.modelo.tipo]()
         return self.imagem
 
-    def rasterizacao_em_x_crescente(self):
+    def rasterizacao_com_delta_x(self):
         b = self.modelo.calcular_b()
 
         for x in range(self.modelo.x, self.modelo.ponto_destino.x):
             self.pintar(Ponto(x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
 
-    def rasterizacao_em_y_crescente(self):
+    def rasterizacao_com_delta_y(self):
         b = self.modelo.calcular_b()
 
         for y in range(self.modelo.y, self.modelo.ponto_destino.y):
             self.pintar(Ponto(self.modelo.x, y))
             self.modelo.recalcular_pontos(b)
 
-    def rasterizacao_em_y_decrescente(self):
+    def rasterizacao_reta_decrescente_com_delta_y(self):
         b = self.modelo.calcular_b()
 
-        while self.modelo.y >= self.modelo.ponto_destino.y:
+        for y in range(self.modelo.y, self.modelo.ponto_destino.y, -1):
             self.pintar(Ponto(self.modelo.x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
 
-    def rasterizacao_em_x_decrescente(self):
+    def rasterizacao_reta_descrescente_com_delta_x(self):
         b = self.modelo.calcular_b()
 
         for x in range(self.modelo.x, self.modelo.ponto_destino.x):

@@ -35,7 +35,7 @@ def gerar_amostras():
         Reta(Ponto(500, 500), Ponto(1000, 1000)),
         Reta(Ponto(300, 400), Ponto(900, 200)),
         Reta(Ponto(50, 100), Ponto(50, 900)),  # reta vertical
-        Reta(Ponto(100, 50), Ponto(900, 50))   # reta horizontal
+        Reta(Ponto(100, 50), Ponto(900, 50)),   # reta horizontal
     ]
 
     gerar_imagem_quadrada_a_partir_de_lista_de_retas(lista_de_retas, 1000)

@@ -10,7 +10,6 @@ def gerar_imagem_quadrada_a_partir_de_lista_de_retas(lista_de_retas: List[Reta],
 
 
 def gerar_amostras():
-
     lista_de_retas = [
         Reta(Ponto(1, 2), Ponto(5, 9)),
         Reta(Ponto(5, 5), Ponto(10, 10)),

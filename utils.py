@@ -36,6 +36,13 @@ class Ponto:
         return any(ponto < 0 for ponto in [self.x, self.y])
 
 
+class PontosEDeltas:
+    ponto_origem: Ponto
+    ponto_destino: Ponto
+    delta_x: int
+    delta_y: int
+
+
 class ModeloReta:
     ponto_origem: Ponto
     ponto_destino: Ponto
@@ -46,18 +53,13 @@ class ModeloReta:
     m: float
     tipo: str
 
-    def __init__(self, ponto1: Ponto, ponto2: Ponto):
-        self.definir_pontos_de_origem_e_destino(ponto1, ponto2)
-        self.definir_deltas()
-
-    def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
-        self.ponto_origem, self.ponto_destino = sorted([ponto1, ponto2], key=attrgetter('x'))
-        self.x = self.ponto_origem.x
-        self.y = self.ponto_origem.y
-
-    def definir_deltas(self):
-        self.delta_x = abs(self.ponto_origem.x - self.ponto_destino.x)
-        self.delta_y = abs(self.ponto_origem.y - self.ponto_destino.y)
+    def __init__(self, dados: PontosEDeltas):
+        self.ponto_origem = dados.ponto_origem
+        self.ponto_destino = dados.ponto_destino
+        self.x = dados.ponto_origem.x
+        self.y = dados.ponto_origem.y
+        self.delta_x = dados.delta_x
+        self.delta_y = dados.delta_y
 
     def definir_m(self):
         pass
@@ -72,8 +74,8 @@ class ModeloReta:
 class ModeloRetaDeltaX(ModeloReta):
     tipo = "X"
 
-    def __init__(self, p1: Ponto, p2: Ponto):
-        super().__init__(p1, p2)
+    def __init__(self, dados: PontosEDeltas):
+        super().__init__(dados)
         self.definir_m()
 
     def definir_m(self):
@@ -90,8 +92,8 @@ class ModeloRetaDeltaX(ModeloReta):
 class ModeloRetaDeltaY(ModeloReta):
     tipo = "Y"
 
-    def __init__(self, p1: Ponto, p2: Ponto):
-        super().__init__(p1, p2)
+    def __init__(self, dados: PontosEDeltas):
+        super().__init__(dados)
         self.definir_m()
 
     def definir_m(self):
@@ -108,8 +110,8 @@ class ModeloRetaDeltaY(ModeloReta):
 class ModeloRetaDeltaYDescrescente(ModeloReta):
     tipo = "Yd"
 
-    def __init__(self, p1: Ponto, p2: Ponto):
-        super().__init__(p1, p2)
+    def __init__(self, dados: PontosEDeltas):
+        super().__init__(dados)
         self.y -= 1
         self.definir_m()
 
@@ -127,8 +129,8 @@ class ModeloRetaDeltaYDescrescente(ModeloReta):
 class ModeloRetaDeltaXDescrescente(ModeloReta):
     tipo = "Xd"
 
-    def __init__(self, p1: Ponto, p2: Ponto):
-        super().__init__(p1, p2)
+    def __init__(self, dados: PontosEDeltas):
+        super().__init__(dados)
         self.y -= 1
         self.definir_m()
 
@@ -141,42 +143,39 @@ class ModeloRetaDeltaXDescrescente(ModeloReta):
     def recalcular_pontos(self, b: float):
         self.x += 1
         self.y = abs(floor(self.m * self.x - b))
-        print(self.x, (self.m * self.x - b))
 
 
 class Reta:
-    ponto_origem: Ponto
-    ponto_destino: Ponto
-    delta_x: int
-    delta_y: int
+    dados: PontosEDeltas
 
     def __init__(self, p1: Ponto, p2: Ponto):
         if p1 == p2:
             raise PontosIguais("Pontos não podem ser iguais")
+
+        self.dados = PontosEDeltas()
 
         self.definir_pontos_de_origem_e_destino(p1, p2)
         self.definir_deltas()
 
     def definir_pontos_de_origem_e_destino(self, ponto1: Ponto, ponto2: Ponto):
         ponto_mais_a_esquerda, ponto_mais_a_direita = sorted([ponto1, ponto2], key=attrgetter('x'))
-        self.ponto_origem = ponto_mais_a_esquerda
-        self.ponto_destino = ponto_mais_a_direita
+        self.dados.ponto_origem = ponto_mais_a_esquerda
+        self.dados.ponto_destino = ponto_mais_a_direita
 
     def definir_deltas(self):
-        self.delta_x = abs(self.ponto_origem.x - self.ponto_destino.x)
-        self.delta_y = abs(self.ponto_origem.y - self.ponto_destino.y)
+        self.dados.delta_x = abs(self.dados.ponto_origem.x - self.dados.ponto_destino.x)
+        self.dados.delta_y = abs(self.dados.ponto_origem.y - self.dados.ponto_destino.y)
 
     def gerar_modelo(self):
-        if self.ponto_origem.y > self.ponto_destino.y:
-            if self.delta_y > self.delta_x:
-                print("YD ------------------------")
-                return ModeloRetaDeltaYDescrescente(self.ponto_origem, self.ponto_destino)
-            return ModeloRetaDeltaXDescrescente(self.ponto_origem, self.ponto_destino)
+        if self.dados.ponto_origem.y > self.dados.ponto_destino.y:
+            if self.dados.delta_y > self.dados.delta_x:
+                return ModeloRetaDeltaYDescrescente(self.dados)
+            return ModeloRetaDeltaXDescrescente(self.dados)
 
         else:
-            if self.delta_y > self.delta_x:
-                return ModeloRetaDeltaY(self.ponto_origem, self.ponto_destino)
-            return ModeloRetaDeltaX(self.ponto_origem, self.ponto_destino)
+            if self.dados.delta_y > self.dados.delta_x:
+                return ModeloRetaDeltaY(self.dados)
+            return ModeloRetaDeltaX(self.dados)
 
 
 @dataclass()

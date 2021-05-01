@@ -208,10 +208,11 @@ class Rasterizador:
 
     def rasterizacao_reta_decrescente_com_delta_y(self):
         b = self.modelo.calcular_b()
+        self.pintar(Ponto(self.modelo.x, self.modelo.y))
 
         for y in range(self.modelo.y, self.modelo.ponto_destino.y, -1):
-            self.pintar(Ponto(self.modelo.x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
+            self.pintar(Ponto(self.modelo.x, self.modelo.y))
 
     def rasterizacao_reta_descrescente_com_delta_x(self):
         b = self.modelo.calcular_b()

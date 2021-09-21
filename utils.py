@@ -4,6 +4,8 @@ from typing import List, Union
 from PIL import Image
 import numpy
 from math import floor
+import math
+
 
 PRETO = [50, 50, 50]
 
@@ -237,11 +239,11 @@ class Imagem:
         # Gera array tridimencional (largura, altura, cor do pixel) com todos os pixeis brancos
         self.array_imagem = numpy.full((larg, alt, 3), 255, dtype=numpy.uint8)
 
-    def rasterizar(self, reta: Reta):
+    def rasterizar_reta(self, reta: Reta):
         rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
         self.array_imagem = rasterizador.rasterizar()
 
-    def rasterizar_varios(self, retas: List[Reta]):
+    def rasterizar_varias_retas(self, retas: List[Reta]):
         for reta in retas:
             rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
             self.array_imagem = rasterizador.rasterizar()
@@ -251,3 +253,22 @@ class Imagem:
         # A rotação é feita para que a imagem fique de acordo com o plano cartesiano (origem no canto inferior esquerdo)
         img = Image.fromarray(self.array_imagem).transpose(Image.ROTATE_90)
         img.save(f"{nome}.png")
+
+
+def criar_poligono(lados, radius=1, rotation=0, translation=None) -> List[Reta]:
+    one_segment = math.pi * 2 / lados
+
+    pontos = [
+        (int(math.sin(one_segment * i + rotation) * radius * 100),
+         int(math.cos(one_segment * i + rotation) * radius * 100))
+        for i in range(lados)]
+
+    if translation:
+        pontos = [[sum(pair) for pair in zip(point, translation)]
+                  for point in pontos]
+
+    retas = []
+    for i in range(0, len(pontos)):
+        retas.append(Reta(Ponto(*pontos[i-1]), Ponto(*pontos[i])))
+
+    return retas

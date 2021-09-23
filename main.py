@@ -1,6 +1,6 @@
 from typing import List
-
-from utils import Reta, Imagem, Ponto, criar_poligono
+from math import pi
+from utils import Reta, Imagem, Ponto, Poligono, VERMELHO
 
 
 def gerar_imagem_quadrada_a_partir_de_lista_de_retas(lista_de_retas: List[Reta], resolucao: int):
@@ -43,7 +43,12 @@ def gerar_amostras():
 
 if __name__ == "__main__":
     #gerar_amostras()
-    poligono = criar_poligono(6, rotation=20, translation=(500, 500))
-    imagem = Imagem(1000, 1000)
-    imagem.rasterizar_varias_retas(poligono)
+    poligono = Poligono(4, proporcao=0.2, translacao=(10, 10), rotacao=pi/4)
+    poligono2 = Poligono(proporcao=0.2, translacao=(50, 10))
+    poligono3 = Poligono(5, proporcao=0.2, translacao=(33, 50))
+    imagem = Imagem(100, 100)
+    imagem.rasterizar_poligono(poligono)
+    imagem.rasterizar_poligono(poligono2)
+    imagem.rasterizar_poligono(poligono3)
+    imagem.pintar_poligono(VERMELHO)
     imagem.salvar(nome=f"soumteste")

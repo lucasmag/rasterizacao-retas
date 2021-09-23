@@ -1,13 +1,18 @@
 from operator import attrgetter
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Tuple
 from PIL import Image
 import numpy
 from math import floor
 import math
 
+from numpy import ndarray
 
+BRANCO = [255, 255, 255]
 PRETO = [50, 50, 50]
+VERMELHO = [255, 50, 50]
+VERDE = [50, 255, 50]
+AZUL = [50, 50, 255]
 
 
 class PintarForaDaImagem(Exception):
@@ -21,6 +26,11 @@ class PontosIguais(Exception):
 
 
 class PontoInvalido(Exception):
+    def __init__(self, msg):
+        super().__init__(self, msg)
+
+
+class PoucosLados(Exception):
     def __init__(self, msg):
         super().__init__(self, msg)
 
@@ -230,14 +240,61 @@ class Rasterizador:
             raise PintarForaDaImagem("O pixel encontra-se fora da imagem. Crie uma imagem maior")
 
 
+class Poligono:
+    lados: int
+    proporcao: int
+    rotacao: int
+    translacao: Tuple[int, int]
+    cor: Tuple[int, int, int]
+
+    def __init__(self, lados=3, proporcao=1, rotacao=0, translacao=(0, 0), cor=PRETO):
+        assert lados > 2 and isinstance(lados, int), "O polígono deve ter mais de 2 lados."
+        assert proporcao > 0, "Proporção deve ser maior que zero."
+        assert self.translacao_valida(translacao), "Translação deve ser uma tupla com 2 inteiros."
+
+        self.lados = lados
+        self.proporcao = proporcao
+        self.rotacao = rotacao
+        self.translacao = translacao
+        self.cor = cor
+
+    def translacao_valida(self, t):
+        return isinstance(t, Tuple) and all([type(x) == int for x in t]) and len(t) == 2
+
+    def gerar_retas(self) -> List[Reta]:
+        lado = math.pi * 2 / self.lados
+
+        pontos = [
+            (floor(math.sin(lado * i + self.rotacao) * self.proporcao * 100),
+             floor(math.cos(lado * i + self.rotacao) * self.proporcao * 100))
+            for i in range(self.lados)]
+
+        menor_x = abs(min([ponto[0] for ponto in pontos]))
+        menor_y = abs(min([ponto[1] for ponto in pontos]))
+
+        pontos_origem = [(x + menor_x, y + menor_y) for x, y in pontos]
+        print(pontos_origem)
+        if self.translacao:
+            pontos_origem = [[sum(pair) for pair in zip(point, self.translacao)]
+                             for point in pontos_origem]
+
+        retas = []
+        for i in range(0, len(pontos_origem)):
+            retas.append(Reta(Ponto(*pontos_origem[i - 1]), Ponto(*pontos_origem[i])))
+
+        return retas
+
+
 class Imagem:
     array_imagem = None
+    largura: int
+    altura: int
 
     def __init__(self, largura: int, altura: int):
-        larg = abs(largura)
-        alt = abs(altura)
+        self.largura = abs(largura)
+        self.altura = abs(altura)
         # Gera array tridimencional (largura, altura, cor do pixel) com todos os pixeis brancos
-        self.array_imagem = numpy.full((larg, alt, 3), 255, dtype=numpy.uint8)
+        self.array_imagem = numpy.full((largura, altura, 3), 255, dtype=numpy.uint8)
 
     def rasterizar_reta(self, reta: Reta):
         rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
@@ -248,27 +305,38 @@ class Imagem:
             rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
             self.array_imagem = rasterizador.rasterizar()
 
+    def rasterizar_poligono(self, poligono: Poligono):
+        self.rasterizar_varias_retas(poligono.gerar_retas())
+
+    def pintar_poligono(self, cor):
+        quadro = numpy.full((self.largura, self.altura, 3), 255, dtype=numpy.uint8)
+        dentro = False
+
+        for linha in range(0, self.largura):
+            ultimo = numpy.full(3, 255, dtype=numpy.uint8)
+
+            for coluna in range(0, self.altura):
+                atual = self.array_imagem[linha][coluna]
+
+                if all(atual == PRETO) and all(ultimo == BRANCO):
+                    dentro = not dentro
+
+                if all(atual == BRANCO) and dentro:
+                    quadro[linha][coluna] = cor
+
+                else:
+                    quadro[linha][coluna] = atual
+
+                ultimo = atual
+
+            if dentro:
+                dentro = False
+                quadro[linha] = self.array_imagem[linha]
+
+        self.array_imagem = quadro
+
     def salvar(self, nome: str):
         # O ponto de origem original da matriz é no canto superior esquerdo (linha 0, coluna 0)
         # A rotação é feita para que a imagem fique de acordo com o plano cartesiano (origem no canto inferior esquerdo)
-        img = Image.fromarray(self.array_imagem).transpose(Image.ROTATE_90)
+        img = Image.fromarray(self.array_imagem)
         img.save(f"{nome}.png")
-
-
-def criar_poligono(lados, radius=1, rotation=0, translation=None) -> List[Reta]:
-    one_segment = math.pi * 2 / lados
-
-    pontos = [
-        (int(math.sin(one_segment * i + rotation) * radius * 100),
-         int(math.cos(one_segment * i + rotation) * radius * 100))
-        for i in range(lados)]
-
-    if translation:
-        pontos = [[sum(pair) for pair in zip(point, translation)]
-                  for point in pontos]
-
-    retas = []
-    for i in range(0, len(pontos)):
-        retas.append(Reta(Ponto(*pontos[i-1]), Ponto(*pontos[i])))
-
-    return retas

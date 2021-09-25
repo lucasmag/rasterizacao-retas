@@ -1,11 +1,26 @@
+import logging
+from copy import deepcopy
+from enum import Enum
 from operator import attrgetter
-from dataclasses import dataclass
-from typing import List, Union
+from dataclasses import dataclass, field
+from typing import List, Union, Tuple, NewType
 from PIL import Image
 import numpy
-from math import floor
+from math import floor, sin, cos, pi
 
-PRETO = [50, 50, 50]
+logging.basicConfig(format="[%(asctime)s] %(levelname)s {%(filename)s:%(lineno)d} - %(message)s", level=logging.INFO)
+
+Cor = NewType("Cor", List[int])
+
+
+class Cores(Enum):
+    VERDE = Cor([20, 153, 17])
+    VERMELHO = Cor([176, 65, 62])
+    AZUL = Cor([45, 125, 210])
+    AMARELO = Cor([242, 221, 110])
+    ROXO = Cor([179, 136, 235])
+    CIANO = Cor([129, 216, 208])
+    PRETO = Cor([0, 0, 0])
 
 
 class PintarForaDaImagem(Exception):
@@ -14,6 +29,11 @@ class PintarForaDaImagem(Exception):
 
 
 class PontosIguais(Exception):
+    def __init__(self, msg):
+        super().__init__(self, msg)
+
+
+class MuitosPoligonos(Exception):
     def __init__(self, msg):
         super().__init__(self, msg)
 
@@ -178,10 +198,15 @@ class Reta:
             return ModeloRetaDeltaX(self.dados)
 
 
-@dataclass()
 class Rasterizador:
     imagem: numpy
     modelo: ModeloReta
+    cor_desenho: Cor
+
+    def __init__(self, imagem: numpy, modelo: ModeloReta, cor_desenho: Cor = Cores.PRETO.value):
+        self.imagem = imagem
+        self.modelo = modelo
+        self.cor_desenho = cor_desenho
 
     def rasterizar(self):
         dict(
@@ -196,55 +221,167 @@ class Rasterizador:
         b = self.modelo.calcular_b()
 
         for x in range(self.modelo.x, self.modelo.ponto_destino.x):
-            self.pintar(Ponto(x, self.modelo.y))
+            self.desenhar(Ponto(x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
 
     def rasterizacao_com_delta_y(self):
         b = self.modelo.calcular_b()
 
         for y in range(self.modelo.y, self.modelo.ponto_destino.y):
-            self.pintar(Ponto(self.modelo.x, y))
+            self.desenhar(Ponto(self.modelo.x, y))
             self.modelo.recalcular_pontos(b)
 
     def rasterizacao_reta_decrescente_com_delta_y(self):
         b = self.modelo.calcular_b()
-        self.pintar(Ponto(self.modelo.x, self.modelo.y))
+        self.desenhar(Ponto(self.modelo.x, self.modelo.y))
 
         for y in range(self.modelo.y, self.modelo.ponto_destino.y, -1):
             self.modelo.recalcular_pontos(b)
-            self.pintar(Ponto(self.modelo.x, self.modelo.y))
+            self.desenhar(Ponto(self.modelo.x, self.modelo.y))
 
     def rasterizacao_reta_descrescente_com_delta_x(self):
         b = self.modelo.calcular_b()
 
         for x in range(self.modelo.x, self.modelo.ponto_destino.x):
-            self.pintar(Ponto(x, self.modelo.y))
+            self.desenhar(Ponto(x, self.modelo.y))
             self.modelo.recalcular_pontos(b)
 
-    def pintar(self, ponto: Ponto):
+    def desenhar(self, ponto: Ponto):
         try:
-            self.imagem[ponto.x, ponto.y] = PRETO
+            self.imagem[ponto.x, ponto.y] = self.cor_desenho
         except IndexError:
             raise PintarForaDaImagem("O pixel encontra-se fora da imagem. Crie uma imagem maior")
 
 
+class Poligono:
+    lados: int
+    proporcao: int  # Proporção == 1 forma um polígono de aproximadamente 200px de largura/altura
+    rotacao: int
+    translacao: Tuple[int, int]  # Translação a partir do canto inferior esquerdo da imagem, onde x=0, y=0
+    cor: Cor
+    limites_inferiores: Tuple[int, int] = None
+    limites_superiores: Tuple[int, int] = None
+
+    def __init__(self, lados: int = 3, proporcao: float = 1, translacao=(0, 0), rotacao=0, cor=None):
+        assert lados > 2, "O polígono deve ter mais de 2 lados."
+        assert proporcao > 0, "Proporção deve ser maior que zero."
+        assert self.translacao_valida(translacao), "Translação deve ser uma tupla com 2 inteiros."
+
+        self.lados = lados
+        self.proporcao = proporcao
+        self.rotacao = rotacao
+        self.translacao = translacao
+        self.cor = cor
+
+    def translacao_valida(self, t):
+        return isinstance(t, Tuple) and all([type(x) == int for x in t]) and len(t) == 2
+
+    def gerar_retas(self) -> List[Reta]:
+        logging.info(f"Gerando polígono de {self.lados} lados...")
+        lado = pi * 2 / self.lados
+
+        pontos = [
+            (int(sin(lado * i + self.rotacao) * self.proporcao * 100),
+             int(cos(lado * i + self.rotacao) * self.proporcao * 100))
+            for i in range(self.lados)]
+
+        menor_x = abs(min([ponto[0] for ponto in pontos]))
+        menor_y = abs(min([ponto[1] for ponto in pontos]))
+
+        pontos_origem = [(x + menor_x, y + menor_y) for x, y in pontos]
+        if self.translacao:
+            pontos_origem = [[sum(pair) for pair in zip(point, self.translacao)]
+                             for point in pontos_origem]
+
+        logging.info(f"Pontos do poligono gerado: {pontos_origem}")
+
+        lista_x = []
+        lista_y = []
+
+        for ponto in pontos_origem:
+            lista_x.append(ponto[0])
+            lista_y.append(ponto[1])
+
+        self.limites_inferiores = (min(lista_x), min(lista_y))
+        self.limites_superiores = (max(lista_x), max(lista_y))
+
+        logging.info(f"Limites do poligono: "
+                     f"[{self.limites_inferiores[0]},{self.limites_inferiores[1]}], "
+                     f"[{self.limites_superiores[0]},{self.limites_superiores[1]}]")
+
+        retas = []
+        for i in range(0, len(pontos_origem)):
+            retas.append(Reta(Ponto(*pontos_origem[i - 1]), Ponto(*pontos_origem[i])))
+
+        return retas
+
+
 class Imagem:
     array_imagem = None
+    largura: int
+    altura: int
+    cor_borda_atual = 1
 
     def __init__(self, largura: int, altura: int):
-        larg = abs(largura)
-        alt = abs(altura)
+        self.largura = abs(largura)
+        self.altura = abs(altura)
         # Gera array tridimencional (largura, altura, cor do pixel) com todos os pixeis brancos
-        self.array_imagem = numpy.full((larg, alt, 3), 255, dtype=numpy.uint8)
+        self.array_imagem = numpy.full((largura, altura, 3), 255, dtype=numpy.uint8)
 
-    def rasterizar(self, reta: Reta):
+    def rasterizar_reta(self, reta: Reta):
         rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
         self.array_imagem = rasterizador.rasterizar()
 
-    def rasterizar_varios(self, retas: List[Reta]):
+    def rasterizar_varias_retas(self, retas: List[Reta]):
         for reta in retas:
             rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
             self.array_imagem = rasterizador.rasterizar()
+
+    def rasterizar_poligono(self, poligono: Poligono, cor: Cor = None):
+        if self.cor_borda_atual > 10:
+            logging.error("Quantidade máxima de polígonos por imagem excedida. Máximo: 10. Cancelando rasterização...")
+            return
+
+        cor_borda = Cor([self.cor_borda_atual, ] * 3)
+
+        for reta in poligono.gerar_retas():
+            rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo(), cor_desenho=cor_borda)
+            self.array_imagem = rasterizador.rasterizar()
+
+        if cor:
+            self.pintar_poligono(poligono, cor)
+
+        self.cor_borda_atual += 1
+
+    def pintar_poligono(self, poligono: Poligono, cor: Cor):
+        logging.info("Pintando poligono...")
+        quadro = deepcopy(self.array_imagem)
+        dentro = False
+        x_inferior, y_inferior = poligono.limites_inferiores
+        x_superior, y_superior = poligono.limites_superiores
+
+        for linha in range(x_inferior, x_superior + 1):
+            ultimo = numpy.full(3, 255, dtype=numpy.uint8)
+
+            for coluna in range(y_inferior, y_superior + 1):
+                atual = self.array_imagem[linha][coluna]
+
+                if all(atual == self.cor_borda_atual) and all(ultimo != self.cor_borda_atual):
+                    dentro = not dentro
+
+                if all(self.cor_borda_atual != atual) and dentro:
+                    quadro[linha][coluna] = cor
+
+                else:
+                    quadro[linha][coluna] = atual
+
+                ultimo = atual
+
+            if dentro:
+                dentro = False
+                quadro[linha] = self.array_imagem[linha]
+
+        self.array_imagem = quadro
 
     def salvar(self, nome: str):
         # O ponto de origem original da matriz é no canto superior esquerdo (linha 0, coluna 0)

@@ -6,17 +6,21 @@ from dataclasses import dataclass, field
 from typing import List, Union, Tuple, NewType
 from PIL import Image
 import numpy
-from math import floor, ceil, sin, cos, pi
+from math import floor, sin, cos, pi
 
 logging.basicConfig(format="[%(asctime)s] %(levelname)s {%(filename)s:%(lineno)d} - %(message)s", level=logging.INFO)
 
 Cor = NewType("Cor", List[int])
 
 
-PRETO = Cor([0, 0, 0])
-VERDE = Cor([20, 153, 17])
-VERMELHO = Cor([176, 65, 62])
-AZUL = Cor([45, 125, 210])
+class Cores(Enum):
+    VERDE = Cor([20, 153, 17])
+    VERMELHO = Cor([176, 65, 62])
+    AZUL = Cor([45, 125, 210])
+    AMARELO = Cor([242, 221, 110])
+    ROXO = Cor([179, 136, 235])
+    CIANO = Cor([129, 216, 208])
+    PRETO = Cor([0, 0, 0])
 
 
 class PintarForaDaImagem(Exception):
@@ -194,15 +198,15 @@ class Reta:
             return ModeloRetaDeltaX(self.dados)
 
 
-@dataclass()
 class Rasterizador:
     imagem: numpy
     modelo: ModeloReta
-    cor_desenho: Cor = None
+    cor_desenho: Cor
 
-    def __post_init__(self):
-        if not self.cor_desenho:
-            self.cor_desenho = PRETO
+    def __init__(self, imagem: numpy, modelo: ModeloReta, cor_desenho: Cor = Cores.PRETO.value):
+        self.imagem = imagem
+        self.modelo = modelo
+        self.cor_desenho = cor_desenho
 
     def rasterizar(self):
         dict(
@@ -251,7 +255,7 @@ class Rasterizador:
 
 class Poligono:
     lados: int
-    proporcao: int  # Proporção = 1 é aproximadamente equivalente a 200px de largura/altura
+    proporcao: int  # Proporção == 1 forma um polígono de aproximadamente 200px de largura/altura
     rotacao: int
     translacao: Tuple[int, int]  # Translação a partir do canto inferior esquerdo da imagem, onde x=0, y=0
     cor: Cor

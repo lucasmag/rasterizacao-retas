@@ -58,7 +58,7 @@ amostras_de_retas = [retas_p, retas_m, retas_g]
 amostras_de_poligonos = [poligonos_p, poligonos_m, poligonos_g]
 
 
-def exemplos_relatorio():
+def gerar_exemplos_relatorio():
     """Gera as imagens utilizadas no relatório"""
 
     def varias_retas():

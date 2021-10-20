@@ -1,3 +1,4 @@
+import argparse
 import logging
 from copy import deepcopy
 from enum import Enum
@@ -7,8 +8,8 @@ from typing import List, Union, Tuple, NewType, Optional
 from PIL import Image
 import numpy
 from math import floor, sin, cos, pi
+from sys import argv, exit
 
-logging.basicConfig(format="[%(asctime)s] %(levelname)s {%(filename)s:%(lineno)d} - %(message)s", level=logging.INFO)
 
 Cor = NewType("Cor", List[int])
 
@@ -250,6 +251,9 @@ class Rasterizador:
         try:
             self.imagem[ponto.x, ponto.y] = self.cor_desenho
         except IndexError:
+            logging.error(self.modelo)
+            logging.error(f"Imagem: {len(self.imagem)}x{len(self.imagem[0])}")
+            logging.error(f"Reta: {self.modelo.ponto_origem}, destino: {self.modelo.ponto_destino}")
             raise PintarForaDaImagem("O pixel encontra-se fora da imagem. Crie uma imagem maior")
 
 

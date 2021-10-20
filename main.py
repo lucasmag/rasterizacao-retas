@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from utils import Reta, Imagem, Poligono
-from amostras import amostras_de_retas, amostras_de_poligonos
+from amostras import amostras_de_retas, amostras_de_poligonos, exemplos_relatorio
 
 
 def gerar_imagem_a_partir_de_lista_de_retas(lista_de_retas: List[Reta], resolucao: Tuple[int]):
@@ -21,3 +21,6 @@ if __name__ == "__main__":
 
     for poligonos in amostras_de_poligonos:
         gerar_imagem_a_partir_de_lista_de_poligonos(*poligonos)
+
+    # Descomente a linha seguinte para gerar as imagens de exemplo no relatório
+    # exemplos_relatorio()

@@ -3,7 +3,7 @@ from copy import deepcopy
 from enum import Enum
 from operator import attrgetter
 from dataclasses import dataclass, field
-from typing import List, Union, Tuple, NewType
+from typing import List, Union, Tuple, NewType, Optional
 from PIL import Image
 import numpy
 from math import floor, sin, cos, pi
@@ -255,20 +255,19 @@ class Rasterizador:
 
 class Poligono:
     lados: int
-    proporcao: int  # Proporção == 1 forma um polígono de aproximadamente 200px de largura/altura
+    escala: int  # Proporção == 1 forma um polígono de aproximadamente 200px de largura/altura
     rotacao: int
     translacao: Tuple[int, int]  # Translação a partir do canto inferior esquerdo da imagem, onde x=0, y=0
-    cor: Cor
+    cor: Optional[Cor]
     limites_inferiores: Tuple[int, int] = None
     limites_superiores: Tuple[int, int] = None
 
-    def __init__(self, lados: int = 3, proporcao: float = 1, translacao=(0, 0), rotacao=0, cor=None):
+    def __init__(self, lados: int, escala: float = 1, translacao=(0, 0), rotacao=0, cor: Cor = None):
         assert lados > 2, "O polígono deve ter mais de 2 lados."
-        assert proporcao > 0, "Proporção deve ser maior que zero."
+        assert escala > 0, "Escala deve ser maior que zero."
         assert self.translacao_valida(translacao), "Translação deve ser uma tupla com 2 inteiros."
-
         self.lados = lados
-        self.proporcao = proporcao
+        self.escala = escala
         self.rotacao = rotacao
         self.translacao = translacao
         self.cor = cor
@@ -278,22 +277,26 @@ class Poligono:
 
     def gerar_retas(self) -> List[Reta]:
         logging.info(f"Gerando polígono de {self.lados} lados...")
-        lado = pi * 2 / self.lados
+
+        angulo_lado = pi * 2 / self.lados
 
         pontos = [
-            (int(sin(lado * i + self.rotacao) * self.proporcao * 100),
-             int(cos(lado * i + self.rotacao) * self.proporcao * 100))
+            (int(sin(angulo_lado * i + self.rotacao) * self.escala * 100),
+             int(cos(angulo_lado * i + self.rotacao) * self.escala * 100))
             for i in range(self.lados)]
 
         menor_x = abs(min([ponto[0] for ponto in pontos]))
         menor_y = abs(min([ponto[1] for ponto in pontos]))
 
         pontos_origem = [(x + menor_x, y + menor_y) for x, y in pontos]
+
         if self.translacao:
             pontos_origem = [[sum(pair) for pair in zip(point, self.translacao)]
                              for point in pontos_origem]
 
         logging.info(f"Pontos do poligono gerado: {pontos_origem}")
+
+        # Definindo limites do polígono
 
         lista_x = []
         lista_y = []
@@ -334,10 +337,9 @@ class Imagem:
 
     def rasterizar_varias_retas(self, retas: List[Reta]):
         for reta in retas:
-            rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo())
-            self.array_imagem = rasterizador.rasterizar()
+            self.rasterizar_reta(reta)
 
-    def rasterizar_poligono(self, poligono: Poligono, cor: Cor = None):
+    def rasterizar_poligono(self, poligono: Poligono):
         if self.cor_borda_atual > 10:
             logging.error("Quantidade máxima de polígonos por imagem excedida. Máximo: 10. Cancelando rasterização...")
             return
@@ -348,12 +350,16 @@ class Imagem:
             rasterizador = Rasterizador(self.array_imagem, reta.gerar_modelo(), cor_desenho=cor_borda)
             self.array_imagem = rasterizador.rasterizar()
 
-        if cor:
-            self.pintar_poligono(poligono, cor)
+        if poligono.cor:
+            self._pintar_poligono(poligono, poligono.cor)
 
         self.cor_borda_atual += 1
 
-    def pintar_poligono(self, poligono: Poligono, cor: Cor):
+    def rasterizar_varios_poligonos(self, poligonos: List[Poligono]):
+        for poligono in poligonos:
+            self.rasterizar_poligono(poligono)
+
+    def _pintar_poligono(self, poligono: Poligono, cor: Cor):
         logging.info("Pintando poligono...")
         quadro = deepcopy(self.array_imagem)
         dentro = False
@@ -387,4 +393,5 @@ class Imagem:
         # O ponto de origem original da matriz é no canto superior esquerdo (linha 0, coluna 0)
         # A rotação é feita para que a imagem fique de acordo com o plano cartesiano (origem no canto inferior esquerdo)
         img = Image.fromarray(self.array_imagem).transpose(Image.ROTATE_90)
-        img.save(f"{nome}.png")
+        nome_imagem, *_ = nome.split(".")
+        img.save(f"./imagens/{nome_imagem}.png")

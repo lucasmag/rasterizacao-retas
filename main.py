@@ -1,9 +1,6 @@
 from typing import List, Tuple
-from utils import Reta, Imagem, Poligono, Cores
+from utils import Reta, Imagem, Poligono
 from amostras import amostras_de_retas, amostras_de_poligonos
-
-
-cores = [cor.value for cor in Cores]
 
 
 def gerar_imagem_a_partir_de_lista_de_retas(lista_de_retas: List[Reta], resolucao: Tuple[int]):
@@ -14,10 +11,7 @@ def gerar_imagem_a_partir_de_lista_de_retas(lista_de_retas: List[Reta], resoluca
 
 def gerar_imagem_a_partir_de_lista_de_poligonos(lista_de_poligonos: List[Poligono], resolucao: Tuple[int]):
     imagem = Imagem(*resolucao)
-
-    for poligono, cor in zip(lista_de_poligonos, cores):
-        imagem.rasterizar_poligono(poligono, cor=cor)
-
+    imagem.rasterizar_varios_poligonos(lista_de_poligonos)
     imagem.salvar(nome=f"poligonos_{resolucao[0]}x{resolucao[1]}")
 
 

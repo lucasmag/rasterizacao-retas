@@ -38,9 +38,14 @@ $ python main.py
 
 Por padrão a aplicação irá gerar somente as imagens de comparação solicitadas na atividade.
 
-Para gerar todas as imagens presentes no relatório, execute a aplicação com o argumento *gerar_exemplos*:
+Para gerar todas as imagens presentes no relatório, execute a aplicação com a flag *--gerar_exemplos* ou *-g*:
 ```bash
-$ python main.py gerar_exemplos
+$ python main.py --gerar_exemplos
+```
+
+Para mostrar os logs de criação dos objetos, utilize a flag *--verbose* ou *-v*:
+```bash
+$ python main.py -g --verbose
 ```
 
 Todas as saídas devem estar presentes no diretório `/imagens`

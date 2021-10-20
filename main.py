@@ -1,7 +1,7 @@
 import argparse
 import sys
 from typing import List, Tuple
-from utils import Reta, Imagem, Poligono, Parser
+from utils import Reta, Imagem, Poligono
 from amostras import amostras_de_retas, amostras_de_poligonos
 import logging
 

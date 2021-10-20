@@ -7,10 +7,27 @@ from typing import List, Union, Tuple, NewType, Optional
 from PIL import Image
 import numpy
 from math import floor, sin, cos, pi
+from sys import argv, exit
 
-logging.basicConfig(format="[%(asctime)s] %(levelname)s {%(filename)s:%(lineno)d} - %(message)s", level=logging.INFO)
 
 Cor = NewType("Cor", List[int])
+
+
+class Parser:
+    gerar_exemplos: bool = False
+
+    def __init__(self):
+        if len(argv) > 2:
+            logging.error("Muitos argumentos! Verifique o comando digitado.")
+            exit(1)
+
+        elif len(argv) == 2:
+            if argv[1] == "gerar_exemplos":
+                self.gerar_exemplos = True
+
+            else:
+                logging.error(f"'{argv[1]}' argumento desconhecido.")
+                exit(1)
 
 
 class Cores(Enum):
@@ -250,6 +267,9 @@ class Rasterizador:
         try:
             self.imagem[ponto.x, ponto.y] = self.cor_desenho
         except IndexError:
+            logging.error(self.modelo)
+            logging.error(f"Imagem: {len(self.imagem)}x{len(self.imagem[0])}")
+            logging.error(f"Reta: {self.modelo.ponto_origem}, destino: {self.modelo.ponto_destino}")
             raise PintarForaDaImagem("O pixel encontra-se fora da imagem. Crie uma imagem maior")
 
 
